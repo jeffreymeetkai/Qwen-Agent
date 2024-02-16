@@ -61,6 +61,9 @@ def get_react_parser(model_name):
 def get_model(model_name):
     if model_name in ["qwen-vl-plus"]:
         return QwenDashscopeVLModel(model=model_name)
-    model_path = model_path_map.get(model_name, None)
-    model_cls = model_map.get(model_type_map[model_name], LLM)
-    return model_cls(model_path)
+    if "functionary" in model_name:
+        return None
+    else:
+        model_path = model_path_map.get(model_name, None)
+        model_cls = model_map.get(model_type_map[model_name], LLM)
+        return model_cls(model_path)

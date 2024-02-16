@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from parser import ReActParser
+from prompt.functionary_prompt import FunctionaryPrompt
 
 import prettytable
 import tqdm
@@ -48,46 +49,56 @@ def llm_with_plugin(args, query, item=None, exec_limit=3):
     upload_fname_list = item[
         'input_file_path'] if item and 'input_file_path' in item else []
     lang = item['lang'] if item and 'lang' in item else 'en'
-    react_prompt_obj = get_react_prompt(args.model, query, lang,
-                                        upload_fname_list)
-    planning_prompt = react_prompt_obj.build_prompt()
+    
+    if "functionary" in args.model:
+        prompt_obj = FunctionaryPrompt(query, lang, upload_fname_list)
+        messages, tools = prompt_obj.build_messages_and_tools()
+        breakpoint()
+        text = ''
+        output = prompt_obj.chat_completion(messages, tools)
+        pass
+    else:
+        react_prompt_obj = get_react_prompt(args.model, query, lang,
+                                            upload_fname_list)
+        planning_prompt = react_prompt_obj.build_prompt()
+        breakpoint()
 
-    # Execute the code when providing the first action in the query
-    if '<|im_start|>' in query:
-        _, prepend_code, __ = ReActParser().parse_latest_plugin_call(query)
-        prepend_code = replace_upload_fname(prepend_code, upload_fname_list)
-        call_tool(_, [prepend_code], clear=(exec_count == 0))
-        exec_count += 1
-        exec_limit += 1
-
-    # Inference and execute
-    text = ''
-    while exec_count < exec_limit:
-        stop_words_list = react_prompt_obj.get_stop_words_list()
-        output = text_completion(args.llm,
-                                 planning_prompt + text,
-                                 stop_words=stop_words_list)
-
-        if args.gen_only:
-            text += output
-            break
-
-        react_parser = get_react_parser(args.model)
-        action, action_input, output = react_parser.parse_latest_plugin_call(
-            output)
-        if action:
-            action_input = replace_upload_fname(action_input,
-                                                upload_fname_list)
-            observation = call_tool(action, [action_input],
-                                    clear=(exec_count == 0))
-            output += react_prompt_obj.build_observation(observation)
-            text += output
+        # Execute the code when providing the first action in the query
+        if '<|im_start|>' in query:
+            _, prepend_code, __ = ReActParser().parse_latest_plugin_call(query)
+            prepend_code = replace_upload_fname(prepend_code, upload_fname_list)
+            call_tool(_, [prepend_code], clear=(exec_count == 0))
             exec_count += 1
-            if 'error:' in observation or 'Traceback' in observation:
+            exec_limit += 1
+
+        # Inference and execute
+        text = ''
+        while exec_count < exec_limit:
+            stop_words_list = react_prompt_obj.get_stop_words_list()
+            output = text_completion(args.llm,
+                                    planning_prompt + text,
+                                    stop_words=stop_words_list)
+
+            if args.gen_only:
+                text += output
                 break
-        else:
-            text += output
-            break
+
+            react_parser = get_react_parser(args.model)
+            action, action_input, output = react_parser.parse_latest_plugin_call(
+                output)
+            if action:
+                action_input = replace_upload_fname(action_input,
+                                                    upload_fname_list)
+                observation = call_tool(action, [action_input],
+                                        clear=(exec_count == 0))
+                output += react_prompt_obj.build_observation(observation)
+                text += output
+                exec_count += 1
+                if 'error:' in observation or 'Traceback' in observation:
+                    break
+            else:
+                text += output
+                break
     return text
 
 
@@ -238,8 +249,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model',
                         type=str,
-                        default='qwen-14b-chat',
-                        choices=list(model_path_map.keys()))
+                        default='qwen-14b-chat')
+                        # choices=list(model_path_map.keys()))
     parser.add_argument('--task',
                         type=str,
                         default='all',
