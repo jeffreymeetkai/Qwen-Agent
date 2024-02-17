@@ -51,17 +51,48 @@ def llm_with_plugin(args, query, item=None, exec_limit=3):
     lang = item['lang'] if item and 'lang' in item else 'en'
     
     if "functionary" in args.model:
-        prompt_obj = FunctionaryPrompt(query, lang, upload_fname_list)
-        messages, tools = prompt_obj.build_messages_and_tools()
-        breakpoint()
+        model_name = f"meetkai/{args.model}" if not args.model.startswith("meetkai") else args.model
+        prompt_obj = FunctionaryPrompt(query, lang, upload_fname_list, model_name, args.base_url)
+        # Inference and execute
         text = ''
-        output = prompt_obj.chat_completion(messages, tools)
-        pass
+        prev_messages = []
+        while exec_count < exec_limit:
+            messages, tools = prompt_obj.build_messages_and_tools(prev_messages)
+            output = prompt_obj.chat_completion(messages, tools)
+            if output.tool_calls is not None and len(output.tool_calls) > 0:
+                action = "code_interpreter"
+                action_input = output.tool_calls[0].function.arguments
+                action_input = replace_upload_fname(
+                    action_input,
+                    upload_fname_list
+                )
+                observation = call_tool(
+                    action, [action_input], clear=(exec_count == 0)
+                )
+                if output.content is not None:
+                    reasoning = f"Thought: {output.content}"
+                else:
+                    reasoning = "Thought: reasoning"
+                new_observation = prompt_obj.build_observation(observation)
+                text += reasoning + new_observation
+                prev_messages.append(output)
+                prev_messages.append(
+                    {
+                        "tool_call_id": output.tool_calls[0].id,
+                        "role": "tool",
+                        "content": observation
+                    }
+                )
+                exec_count += 1
+                if 'error:' in observation or 'Traceback' in observation:
+                    break
+            else:
+                text += " Here is the result from running the code\nFinal Answer: " + output.content
+                break
     else:
         react_prompt_obj = get_react_prompt(args.model, query, lang,
                                             upload_fname_list)
         planning_prompt = react_prompt_obj.build_prompt()
-        breakpoint()
 
         # Execute the code when providing the first action in the query
         if '<|im_start|>' in query:
@@ -124,6 +155,7 @@ def call_tool(plugin_name, plugin_args_list, clear=False):
 
 def process_code_interpreter(item, writer):
     query = item['query']
+    breakpoint()
     exec_limit = 3 if 'visualization' in item['tags'] else 1
     response = llm_with_plugin(args=args,
                                query=query,
@@ -250,6 +282,10 @@ def parse_args():
     parser.add_argument('--model',
                         type=str,
                         default='qwen-14b-chat')
+                        # choices=list(model_path_map.keys()))
+    parser.add_argument('--base-url',
+                        type=str,
+                        default='http://0.0.0.0:8000/v1')
                         # choices=list(model_path_map.keys()))
     parser.add_argument('--task',
                         type=str,
