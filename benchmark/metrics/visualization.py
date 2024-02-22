@@ -140,7 +140,7 @@ def eval_visualization_acc(output_fname, model_name, judger_model_name='gpt-4-vi
             input_prompt = eval_visual_prompt[item.get('lang', 'en')]
             format_prompt = input_prompt.format(query=prompt)
             output = judger_model_inference(judger_model_name, judger_model, images, format_prompt)
-            if 'right' in output.lower():
+            if 'right' in output.message.content.lower():
                 item['vis_acc'] = True
                 if '<|im_end|>' in item['query']:
                     one_action_right += 1

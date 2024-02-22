@@ -10,6 +10,7 @@ react_prompt_map = {
 }
 
 react_parser_map = {
+    "functionary": ReActParser,
     'qwen': ReActParser,
     'llama': ReActParser,
     'internlm': InternLMReActParser,
@@ -29,6 +30,7 @@ model_type_map = {
     'internlm-7b-chat-1.1': 'internlm',
     'internlm-20b-chat': 'internlm',
     'qwen-vl-chat': 'qwen-vl-chat',
+    'functionary-code-interpreter-deepseek-coder-7b-v0.2': 'qwen',
 }
 
 model_path_map = {

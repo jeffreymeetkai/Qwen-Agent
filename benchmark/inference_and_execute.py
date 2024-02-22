@@ -54,6 +54,13 @@ def llm_with_plugin(args, query, item=None, exec_limit=3):
         model_name = f"meetkai/{args.model}" if not args.model.startswith("meetkai") else args.model
         prompt_obj = FunctionaryPrompt(query, lang, upload_fname_list, model_name, args.base_url)
         # Inference and execute
+        if '<|im_start|>' in query:
+            _, prepend_code, __ = ReActParser().parse_latest_plugin_call(query)
+            prepend_code = replace_upload_fname(prepend_code, upload_fname_list)
+            call_tool(_, [prepend_code], clear=(exec_count == 0))
+            exec_count += 1
+            exec_limit += 1
+
         text = ''
         prev_messages = []
         while exec_count < exec_limit:
@@ -62,6 +69,8 @@ def llm_with_plugin(args, query, item=None, exec_limit=3):
             if output.tool_calls is not None and len(output.tool_calls) > 0:
                 action = "code_interpreter"
                 action_input = output.tool_calls[0].function.arguments
+                if "/mnt/data/" in action_input:
+                    action_input = action_input.replace("/mnt/data/", "")
                 action_input = replace_upload_fname(
                     action_input,
                     upload_fname_list
@@ -74,7 +83,7 @@ def llm_with_plugin(args, query, item=None, exec_limit=3):
                 else:
                     reasoning = "Thought: reasoning"
                 new_observation = prompt_obj.build_observation(observation)
-                text += reasoning + new_observation
+                text += reasoning + "\nAction: code_interpreter\nAction Input:\n```py\n" + action_input + "\n\n```" + new_observation
                 prev_messages.append(output)
                 prev_messages.append(
                     {
@@ -155,7 +164,6 @@ def call_tool(plugin_name, plugin_args_list, clear=False):
 
 def process_code_interpreter(item, writer):
     query = item['query']
-    breakpoint()
     exec_limit = 3 if 'visualization' in item['tags'] else 1
     response = llm_with_plugin(args=args,
                                query=query,
@@ -219,6 +227,7 @@ def eval_metrics(args, test_set, full_output_fname):
     else:
         code_executability = eval_code_execution_rate(abs_output_fname,
                                                       args.task, args.model)
+        breakpoint()
         global_eval_result['code_executability'].update(code_executability)
         if args.task in ['all_ci', 'visualization'
                          ] and not args.eval_code_exec_only:
@@ -245,10 +254,14 @@ def main(args):
         test_set = dataset['test']
     else:
         eval_data_path = os.path.join(args.input_path, args.input_fname)
-        test_set = [
+        temp_test_set = [
             item for item in load_jsonl(eval_data_path)
             if args.task in item['tags']
         ]
+        test_set = []
+        for example in temp_test_set:
+            if "lang" in example and example["lang"] == "en":
+                test_set.append(example)
     logging.info(f'Test set: {len(test_set)}')
 
     if args.eval_only:
@@ -308,7 +321,7 @@ def parse_args():
     parser.add_argument(
         '--vis-judger',
         type=str,
-        default="'gpt-4-vision-preview'",
+        default="gpt-4-vision-preview",
         choices=['gpt-4-vision-preview', 'qwen-vl-chat', 'qwen-vl-plus'])
     args = parser.parse_args()
     return args
