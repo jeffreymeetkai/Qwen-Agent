@@ -79,9 +79,9 @@ def llm_with_plugin(args, query, item=None, exec_limit=3):
                     action, [action_input], clear=(exec_count == 0)
                 )
                 if output.content is not None:
-                    reasoning = f"Thought: {output.content}"
+                    reasoning = f" {output.content}"
                 else:
-                    reasoning = "Thought: reasoning"
+                    reasoning = " reasoning"
                 new_observation = prompt_obj.build_observation(observation)
                 text += reasoning + "\nAction: code_interpreter\nAction Input:\n```py\n" + action_input + "\n\n```" + new_observation
                 prev_messages.append(output)
@@ -96,7 +96,7 @@ def llm_with_plugin(args, query, item=None, exec_limit=3):
                 if 'error:' in observation or 'Traceback' in observation:
                     break
             else:
-                text += " Here is the result from running the code\nFinal Answer: " + output.content
+                text += "Thought: Here is the result from running the code\nFinal Answer: " + output.content
                 break
     else:
         react_prompt_obj = get_react_prompt(args.model, query, lang,
@@ -227,7 +227,6 @@ def eval_metrics(args, test_set, full_output_fname):
     else:
         code_executability = eval_code_execution_rate(abs_output_fname,
                                                       args.task, args.model)
-        breakpoint()
         global_eval_result['code_executability'].update(code_executability)
         if args.task in ['all_ci', 'visualization'
                          ] and not args.eval_code_exec_only:

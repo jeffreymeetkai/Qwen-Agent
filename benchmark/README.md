@@ -166,6 +166,9 @@ Furthermore, we also provide the results of `Qwen-vl-plus` as the code correctne
 git clone https://github.com/QwenLM/Qwen-Agent.git
 cd benchmark
 pip install -r requirements.txt
+mv simhei.ttf /workspace/venv/lib/python3.10/site-packages/matplotlib/mpl-data/fonts/ttf/
+apt install msttcorefonts -qq
+rm ~/.cache/matplotlib -rf
 ```
 
 ### Dataset Download

@@ -58,9 +58,9 @@ def exec_code(text, timelimit=False):
 
 
 def postprocess_code(gen_code, line):
-    # if '<|im_start|>' in line['query']:
-    #     first_action_code = get_action_input_code(line['query'])
-    #     gen_code = first_action_code + gen_code
+    if '<|im_start|>' in line['query']:
+        first_action_code = get_action_input_code(line['query'])
+        gen_code = first_action_code + gen_code
 
     upload_fname_list = line[
         'input_file_path'] if line and 'input_file_path' in line else []
