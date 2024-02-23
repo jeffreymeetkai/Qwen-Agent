@@ -50,7 +50,7 @@ def llm_with_plugin(args, query, item=None, exec_limit=3):
         'input_file_path'] if item and 'input_file_path' in item else []
     lang = item['lang'] if item and 'lang' in item else 'en'
     
-    if "functionary" in args.model:
+    if "functionary" in args.model or args.model == "qwen-code-interpreter-14b-v0.2":
         model_name = f"meetkai/{args.model}" if not args.model.startswith("meetkai") else args.model
         prompt_obj = FunctionaryPrompt(query, lang, upload_fname_list, model_name, args.base_url)
         # Inference and execute

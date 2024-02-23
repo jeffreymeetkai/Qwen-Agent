@@ -31,6 +31,7 @@ model_type_map = {
     'internlm-20b-chat': 'internlm',
     'qwen-vl-chat': 'qwen-vl-chat',
     'functionary-code-interpreter-deepseek-coder-7b-v0.2': 'qwen',
+    'qwen-code-interpreter-14b-v0.2': 'qwen',
 }
 
 model_path_map = {
@@ -63,7 +64,7 @@ def get_react_parser(model_name):
 def get_model(model_name):
     if model_name in ["qwen-vl-plus"]:
         return QwenDashscopeVLModel(model=model_name)
-    if "functionary" in model_name:
+    if "functionary" in model_name or model_name == "qwen-code-interpreter-14b-v0.2":
         return None
     else:
         model_path = model_path_map.get(model_name, None)

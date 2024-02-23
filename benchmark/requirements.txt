@@ -13,3 +13,5 @@ transformers_stream_generator
 openai
 dashscope
 datasets
+jupyter-client
+ipykernel
